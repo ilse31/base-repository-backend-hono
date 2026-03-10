@@ -22,6 +22,7 @@ import {
   CustomEmailJob,
 } from "@/infrastructure/jobs/EmailJobs";
 import { EmailController } from "@/application/controllers/EmailController";
+import { AuthController } from "@/application/controllers/AuthController";
 
 const app = new Hono();
 const container = DIContainer.getInstance();
@@ -112,6 +113,7 @@ const swaggerApp = createSwaggerApp();
 app.route("/swagger", swaggerApp);
 app.route("/doc", swaggerApp);
 
+app.route("/api/auth", container.getAuthController().router);
 app.route("/api/users", container.getUserController().router);
 app.route("/api/posts", container.getPostController().router);
 app.route("/api/emails", new EmailController().router);

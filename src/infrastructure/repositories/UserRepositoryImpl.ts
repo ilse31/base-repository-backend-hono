@@ -11,6 +11,14 @@ export class UserRepositoryImpl implements IUserRepository {
   private prisma = PrismaService.getInstance().getPrisma();
   private cacheService: CacheService;
 
+  private readonly userSelect = {
+    id: true,
+    email: true,
+    name: true,
+    createdAt: true,
+    updatedAt: true,
+  } as const;
+
   constructor() {
     this.cacheService = new CacheService(RedisClient.getInstance().getClient());
   }
@@ -21,8 +29,22 @@ export class UserRepositoryImpl implements IUserRepository {
    * @returns Created user object
    */
   async create(input: CreateUserInput): Promise<User> {
+    const data: {
+      email: string;
+      passwordHash: string;
+      name?: string | null;
+    } = {
+      email: input.email,
+      passwordHash: "legacy-user-no-login",
+    };
+
+    if (input.name !== undefined) {
+      data.name = input.name;
+    }
+
     const user = await this.prisma.user.create({
-      data: input,
+      data,
+      select: this.userSelect,
     });
 
     const userKey = this.cacheService.generateKey("user", user.id);
@@ -48,6 +70,7 @@ export class UserRepositoryImpl implements IUserRepository {
 
     const user = await this.prisma.user.findUnique({
       where: { id },
+      select: this.userSelect,
     });
 
     if (user) {
@@ -65,6 +88,7 @@ export class UserRepositoryImpl implements IUserRepository {
   async findByEmail(email: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
+      select: this.userSelect,
     });
 
     return user;
@@ -80,6 +104,7 @@ export class UserRepositoryImpl implements IUserRepository {
     const user = await this.prisma.user.update({
       where: { id },
       data: input,
+      select: this.userSelect,
     });
 
     const userKey = this.cacheService.generateKey("user", id);
@@ -118,6 +143,7 @@ export class UserRepositoryImpl implements IUserRepository {
     }
 
     const users = await this.prisma.user.findMany({
+      select: this.userSelect,
       orderBy: { createdAt: "desc" },
     });
 

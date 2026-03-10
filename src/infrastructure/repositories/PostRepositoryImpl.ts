@@ -4,6 +4,25 @@ import { PrismaService } from "@/infrastructure/database/prisma";
 import { RedisClient } from "@/infrastructure/redis";
 import { CacheService } from "@/infrastructure/cache/CacheService";
 
+const postWithSafeAuthorSelect = {
+  id: true,
+  title: true,
+  content: true,
+  published: true,
+  createdAt: true,
+  updatedAt: true,
+  authorId: true,
+  author: {
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
+} as const;
+
 export class PostRepositoryImpl implements IPostRepository {
   private prisma = PrismaService.getInstance().getPrisma();
   private cacheService: CacheService;
@@ -15,9 +34,7 @@ export class PostRepositoryImpl implements IPostRepository {
   async create(input: CreatePostInput): Promise<Post> {
     const post = await this.prisma.post.create({
       data: input,
-      include: {
-        author: true,
-      },
+      select: postWithSafeAuthorSelect,
     });
 
     const postKey = this.cacheService.generateKey("post", post.id);
@@ -35,7 +52,7 @@ export class PostRepositoryImpl implements IPostRepository {
       3600,
     );
 
-    return post;
+    return post as Post;
   }
 
   async findById(id: string): Promise<Post | null> {
@@ -48,16 +65,14 @@ export class PostRepositoryImpl implements IPostRepository {
 
     const post = await this.prisma.post.findUnique({
       where: { id },
-      include: {
-        author: true,
-      },
+      select: postWithSafeAuthorSelect,
     });
 
     if (post) {
       await this.cacheService.set(cacheKey, post, 3600);
     }
 
-    return post;
+    return post as Post | null;
   }
 
   async findByAuthorId(authorId: string): Promise<Post[]> {
@@ -74,24 +89,20 @@ export class PostRepositoryImpl implements IPostRepository {
 
     const posts = await this.prisma.post.findMany({
       where: { authorId },
-      include: {
-        author: true,
-      },
+      select: postWithSafeAuthorSelect,
       orderBy: { createdAt: "desc" },
     });
 
     await this.cacheService.set(authorKey, posts, 3600);
 
-    return posts;
+    return posts as Post[];
   }
 
   async update(id: string, input: UpdatePostInput): Promise<Post> {
     const post = await this.prisma.post.update({
       where: { id },
       data: input,
-      include: {
-        author: true,
-      },
+      select: postWithSafeAuthorSelect,
     });
 
     const postKey = this.cacheService.generateKey("post", id);
@@ -109,7 +120,7 @@ export class PostRepositoryImpl implements IPostRepository {
       3600,
     );
 
-    return post;
+    return post as Post;
   }
 
   async delete(id: string): Promise<void> {
@@ -146,14 +157,12 @@ export class PostRepositoryImpl implements IPostRepository {
     }
 
     const posts = await this.prisma.post.findMany({
-      include: {
-        author: true,
-      },
+      select: postWithSafeAuthorSelect,
       orderBy: { createdAt: "desc" },
     });
 
     await this.cacheService.set(listKey, posts, 3600);
 
-    return posts;
+    return posts as Post[];
   }
 }

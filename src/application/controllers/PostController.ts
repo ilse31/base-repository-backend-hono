@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
 import { PostService } from "@/domain/services/PostService";
 import { CreatePostInput, UpdatePostInput } from "@/domain/entities/Post";
 import { ResponseMiddleware } from "../middleware/ResponseMiddleware";
 import { ApiError } from "../errors/ApiError";
+import { AuthMiddleware } from "../middleware/AuthMiddleware";
 import {
   PostCreateSchema,
   PostUpdateSchema,
@@ -14,6 +14,7 @@ import {
 
 export class PostController {
   public router = new Hono();
+
   constructor(private postService: PostService) {
     this.setupRoutes();
   }
@@ -21,28 +22,36 @@ export class PostController {
   private setupRoutes() {
     this.router.post(
       "/",
-      zValidator("json", PostCreateSchema),
+      AuthMiddleware.requireAuth(),
+      zValidator("json", PostCreateSchema.omit({ authorId: true })),
       this.createPost.bind(this),
     );
+
     this.router.get("/", this.getAllPosts.bind(this));
+
     this.router.get(
       "/:id",
       zValidator("param", IdParamSchema),
       this.getPostById.bind(this),
     );
+
     this.router.get(
       "/author/:authorId",
       zValidator("param", AuthorIdParamSchema),
       this.getPostsByAuthor.bind(this),
     );
+
     this.router.put(
       "/:id",
+      AuthMiddleware.requireAuth(),
       zValidator("param", IdParamSchema),
       zValidator("json", PostUpdateSchema),
       this.updatePost.bind(this),
     );
+
     this.router.delete(
       "/:id",
+      AuthMiddleware.requireAuth(),
       zValidator("param", IdParamSchema),
       this.deletePost.bind(this),
     );
@@ -50,8 +59,30 @@ export class PostController {
 
   private async createPost(c: any) {
     try {
-      const input = c.req.valid("json") as CreatePostInput;
-      const post = await this.postService.createPost(input);
+      const input = c.req.valid("json") as Omit<CreatePostInput, "authorId">;
+      const auth = c.get("auth") as
+        | {
+            user: {
+              id: string;
+              email: string;
+            };
+          }
+        | undefined;
+
+      if (!auth?.user?.id) {
+        throw new ApiError(
+          "UNAUTHORIZED_ACCESS" as any,
+          "Authentication required",
+          undefined,
+          c.req.path,
+        );
+      }
+
+      const post = await this.postService.createPost({
+        ...input,
+        authorId: auth.user.id,
+      });
+
       return ResponseMiddleware.sendCreated(
         c,
         post,

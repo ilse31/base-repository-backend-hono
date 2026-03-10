@@ -1,4 +1,18 @@
+import { pbkdf2Sync, randomBytes } from "crypto";
 import { PrismaService } from "./prisma";
+
+function hashPassword(password: string): string {
+  const iterations = parseInt(
+    process.env.PASSWORD_HASH_ITERATIONS || "100000",
+    10,
+  );
+  const salt = randomBytes(16).toString("hex");
+  const hash = pbkdf2Sync(password, salt, iterations, 64, "sha512").toString(
+    "hex",
+  );
+
+  return `${iterations}:${salt}:${hash}`;
+}
 
 export class DatabaseService {
   private static instance: DatabaseService;
@@ -66,6 +80,7 @@ export class DatabaseService {
           data: {
             email: "admin@example.com",
             name: "Admin User",
+            passwordHash: hashPassword("Admin12345"),
           },
         });
 
