@@ -1,16 +1,16 @@
 export interface User {
   id: string;
   email: string;
-  name?: string;
+  name: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface CreateUserInput {
   email: string;
-  name?: string | undefined;
+  name?: string | null;
 }
 
 export interface UpdateUserInput {
-  name?: string | undefined;
+  name?: string | null;
 }

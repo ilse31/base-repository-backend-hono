@@ -1,7 +1,7 @@
 export interface Post {
   id: string;
   title: string;
-  content?: string;
+  content: string | null;
   published: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -10,13 +10,13 @@ export interface Post {
 
 export interface CreatePostInput {
   title: string;
-  content?: string | undefined;
-  published?: boolean | undefined;
+  content?: string | null;
+  published?: boolean;
   authorId: string;
 }
 
 export interface UpdatePostInput {
-  title?: string | undefined;
-  content?: string | undefined;
-  published?: boolean | undefined;
+  title?: string;
+  content?: string | null;
+  published?: boolean;
 }

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { CreateUserInput, UpdateUserInput } from "@/domain/entities/User";
+import { CreatePostInput, UpdatePostInput } from "@/domain/entities/Post";
 import {
   IdSchema,
   EmailSchema,
@@ -54,45 +56,62 @@ export class ValidationService {
   }
 
   /**
-   * Validate complete user creation input
+   * Validate complete user creation input.
+   * Converts undefined → null for nullable DB fields so the result
+   * is assignable to CreateUserInput and compatible with Prisma.
    */
-  static validateUserCreate(input: unknown): {
-    email: string;
-    name?: string | undefined;
-  } {
-    return UserCreateSchema.parse(input);
+  static validateUserCreate(input: unknown): CreateUserInput {
+    const result = UserCreateSchema.parse(input);
+    return {
+      email: result.email,
+      name: result.name ?? null,
+    };
   }
 
   /**
-   * Validate user update input
+   * Validate user update input.
+   * Only includes fields that were explicitly provided so Prisma
+   * does not overwrite unrelated columns.
    */
-  static validateUserUpdate(input: unknown): {
-    name?: string | undefined;
-  } {
-    return UserUpdateSchema.parse(input);
+  static validateUserUpdate(input: unknown): UpdateUserInput {
+    const result = UserUpdateSchema.parse(input);
+    const output: UpdateUserInput = {};
+    if (result.name !== undefined) {
+      output.name = result.name;
+    }
+    return output;
   }
 
   /**
-   * Validate complete post creation input
+   * Validate complete post creation input.
+   * Converts undefined → null for nullable DB fields so the result
+   * is assignable to CreatePostInput and compatible with Prisma.
    */
-  static validatePostCreate(input: unknown): {
-    title: string;
-    content?: string | undefined;
-    published?: boolean | undefined;
-    authorId: string;
-  } {
-    return PostCreateSchema.parse(input);
+  static validatePostCreate(input: unknown): CreatePostInput {
+    const result = PostCreateSchema.parse(input);
+    const output: CreatePostInput = {
+      title: result.title,
+      content: result.content ?? null,
+      authorId: result.authorId,
+    };
+    if (result.published !== undefined) {
+      output.published = result.published;
+    }
+    return output;
   }
 
   /**
-   * Validate post update input
+   * Validate post update input.
+   * Only includes fields that were explicitly provided so Prisma
+   * does not overwrite unrelated columns.
    */
-  static validatePostUpdate(input: unknown): {
-    title?: string | undefined;
-    content?: string | undefined;
-    published?: boolean | undefined;
-  } {
-    return PostUpdateSchema.parse(input);
+  static validatePostUpdate(input: unknown): UpdatePostInput {
+    const result = PostUpdateSchema.parse(input);
+    const output: UpdatePostInput = {};
+    if (result.title !== undefined) output.title = result.title;
+    if (result.content !== undefined) output.content = result.content;
+    if (result.published !== undefined) output.published = result.published;
+    return output;
   }
 
   /**
