@@ -1,12 +1,21 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 export class PrismaService {
   private static instance: PrismaService;
   private prisma: PrismaClient;
 
   private constructor() {
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+
+    const adapter = new PrismaPg(pool);
+
     this.prisma = new PrismaClient({
-      log: ['query', 'info', 'warn', 'error'],
+      adapter,
+      log: ["query", "info", "warn", "error"],
     });
   }
 
